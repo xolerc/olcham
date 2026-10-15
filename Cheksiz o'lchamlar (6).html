@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cheksiz o'lchamlar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f2fb;--ink:#1b1842;--mute:#58557d;--card:rgba(244,242,251,.9);--l:42%;--x:#3d5fe0;--y:#0f9e80;--z:#d6306a;--w:#c98200;--v:#7a45d6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1030;--ink:#ecebfa;--mute:#a5a3c9;--card:rgba(15,16,48,.86);--l:68%;--x:#7fa1ff;--y:#6fe0c2;--z:#ff8fb1;--w:#ffc15a;--v:#c9a7ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1030;--ink:#ecebfa;--mute:#a5a3c9;--card:rgba(15,16,48,.86);--l:68%;--x:#7fa1ff;--y:#6fe0c2;--z:#ff8fb1;--w:#ffc15a;--v:#c9a7ff;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55;overflow-x:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.hud{position:fixed;top:0;left:0;right:0;z-index:2;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 0;pointer-events:none}
+.hud b{display:block;font-size:2.6rem;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}
+.stat{margin-top:8px;font-size:.85rem;color:var(--mute);font-variant-numeric:tabular-nums;line-height:1.4}
+main{position:relative;z-index:1}
+section{min-height:100vh;min-height:100svh;display:flex;align-items:flex-end;padding:0 14px calc(22px + env(safe-area-inset-bottom,0px))}
+.card{width:100%;max-width:34rem;margin:0 auto;padding:18px 20px;background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;border-left:5px solid var(--a,var(--mute))}
+.card h1,.card h2{margin:0 0 8px;font-size:1.55rem;line-height:1.15;font-weight:700}
+.card h2 span{color:var(--a);margin-right:8px}
+.card p{margin:0 0 8px;max-width:62ch;overflow-wrap:anywhere}
+.card p:last-child{margin:0}
+.card ul{margin:8px 0 0;padding-left:1.1rem}
+.mute{color:var(--mute)}
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<div class="hud"><b id="dn">0D</b><div class="stat" id="st"></div></div>
+<main id="m"></main>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W,H;
+function resize(){const r=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*r;cv.height=H*r;ctx.setTransform(r,0,0,r,0,0)}
+addEventListener('resize',resize);resize();
+
+const AX=['x','y','z','w','v'];
+let cols=[],ink='#000',Ls='42%';
+function readCols(){const s=getComputedStyle(document.documentElement);cols=AX.map(k=>s.getPropertyValue('--'+k).trim());ink=s.getPropertyValue('--ink').trim();Ls=s.getPropertyValue('--l').trim()}
+function colorOf(i){return i<5?cols[i]:`hsl(${Math.round((i*137.5)%360)},70%,${Ls})`}
+function cssColor(i){return i<5?`var(--${AX[i]})`:`hsl(${Math.round((i*137.5)%360)},70%,var(--l))`}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCols);
+readCols();
+
+const NAMES=['Nuqta','Chiziq','Tekislik','Hajm','Tesserakt','Penterakt','Hekserakt','Heptarakt','Oktarakt','Ennerakt','Dekerakt'];
+function fmt(n,k){
+  if(n>40)return k==='v'?`2^${n}`:`${n} × 2^${n-1}`;
+  const b=BigInt(n);const x=k==='v'?(1n<<b):(n===0?0n:b*(1n<<(b-1n)));
+  return x.toLocaleString('en-US').replace(/,/g,' ');
+}
+const FACTS=[
+  n=>`Har bir uchdan ${n} ta qirra chiqadi.`,
+  n=>`Uni ${2*n} ta ${n-1} o'lchamli kub chegaralab turadi.`,
+  n=>`Har qadamda uchlar soni ikki barobar oshadi.`,
+  n=>`Biz ${n} ta yo'nalishni 3D ga sig'dirmoqdamiz, shuning uchun ular soyada aralashib ketadi.`
+];
+function cardHTML(n){
+  if(n===0)return `<h1>Cheksiz o'lchamlar</h1><p>Pastga suring. Nuqtadan boshlaymiz va har safar bitta yangi yo'nalish qo'shamiz. Bu to'xtamaydi.</p>`;
+  const T={
+    1:['Chiziq',`<p>Nuqtani bir yo'nalishda cho'zsangiz chiziq chiqadi. Faqat uzunlik bor.</p>`],
+    2:['Tekislik',`<p>Chiziqni yon tomonga cho'zsangiz kvadrat chiqadi. Endi uzunlik ham, kenglik ham bor.</p>`],
+    3:['Hajm',`<p>Kvadratni yuqoriga cho'zsangiz kub bo'ladi. Biz yashaydigan dunyo shu.</p>`],
+    4:['Tesserakt',`<p>Kubni yangi yo'nalishda cho'zsak tesserakt chiqadi. Uni to'g'ridan-to'g'ri ko'rib bo'lmaydi, bu 3D dagi soya.</p>`],
+    5:['Penterakt',`<p>Tesseraktni yana cho'zsak 5D kub hosil bo'ladi: 32 ta uch, 80 ta qirra.</p><p class="mute">Fizikada 1920-yillarda Kaluza va Klein beshinchi o'lchamni gravitatsiya bilan elektromagnetizmni birlashtirish uchun taklif qilgan.</p>`]
+  };
+  if(T[n])return `<h2><span>${n}D</span>${T[n][0]}</h2>${T[n][1]}`;
+  const name=NAMES[n]||`${n} o'lchamli kub`;
+  return `<h2><span>${n}D</span>${name}</h2><p>${fmt(n,'v')} ta uch va ${fmt(n,'e')} ta qirra.</p><p class="mute">${FACTS[n%4](n)}</p>`;
+}
+const main=document.getElementById('m');let made=0;
+function addSection(){
+  const n=made++;
+  const s=document.createElement('section'),c=document.createElement('div');
+  c.className='card';c.style.setProperty('--a',n===0?'var(--mute)':cssColor(n-1));
+  c.innerHTML=cardHTML(n);s.appendChild(c);main.appendChild(s);
+}
+for(let i=0;i<8;i++)addSection();
+
+const MAXA=240,NS=1024;
+const signs=new Int8Array(NS*MAXA);
+for(let k=0;k<NS;k++)for(let i=0;i<MAXA;i++){
+  let h=Math.imul(k+1,0x9E3779B1)^Math.imul(i+1,0x85EBCA6B);
+  h^=h>>>15;h=Math.imul(h,0x2C1B3C6D);h^=h>>>12;
+  signs[k*MAXA+i]=(h&1)?1:-1;
+}
+const sc=new Float64Array(MAXA),VX=new Float64Array(MAXA),VY=new Float64Array(MAXA),VZ=new Float64Array(MAXA);
+const PX=new Float64Array(NS),PY=new Float64Array(NS),PZ=new Float64Array(NS),SX=new Float64Array(NS),SY=new Float64Array(NS);
+const dn=document.getElementById('dn'),st=document.getElementById('st');
+let p=0,lastShow=-1;
+
+function frame(ms){
+  const t=reduce?0:ms/1000;
+  while(made<Math.ceil(scrollY/H)+5)addSection();
+  const target=Math.max(0,scrollY/H);
+  p+=(target-p)*(reduce?1:0.14);
+  if(Math.abs(target-p)<0.0005)p=target;
+  const d=p,n=Math.ceil(d-1e-6),ne=Math.min(n,MAXA);
+  let sum=0;
+  for(let i=0;i<ne;i++){sc[i]=i<n-1?1:Math.min(1,d-(n-1));sum+=sc[i]*sc[i]}
+  const R=Math.min(W,H)*0.26,S=R/Math.sqrt(Math.max(1,sum));
+  const ay=t*0.28+p*0.5+0.6,ax=0.45+0.15*Math.sin(t*0.2);
+  const cy_=Math.cos(ay),sy_=Math.sin(ay),cx_=Math.cos(ax),sx_=Math.sin(ax);
+  for(let i=0;i<ne;i++){
+    let ux,uy,uz;
+    if(i<3){ux=i===0?1:0;uy=i===1?1:0;uz=i===2?1:0}
+    else{
+      const y=1-2*((i*0.61803)%1),r=Math.sqrt(1-y*y),a=i*2.39996+t*(0.15+0.05*(i%7));
+      ux=r*Math.cos(a);uy=y;uz=r*Math.sin(a);
+    }
+    let X=ux*cy_+uz*sy_,Z=-ux*sy_+uz*cy_,Y=uy;
+    const Y2=Y*cx_-Z*sx_,Z2=Y*sx_+Z*cx_;
+    const k=sc[i]*S;VX[i]=X*k;VY[i]=Y2*k;VZ[i]=Z2*k;
+  }
+  const W2=W/2,cy=H*0.4,D=R*6;
+  const full=n<=10;
+  const nv=full?(1<<n):NS;
+  for(let k=0;k<nv;k++){
+    let X=0,Y=0,Z=0;
+    for(let i=0;i<ne;i++){
+      const s=full?(((k>>i)&1)?1:-1):signs[k*MAXA+i];
+      X+=s*VX[i];Y+=s*VY[i];Z+=s*VZ[i];
+    }
+    PX[k]=X;PY[k]=Y;PZ[k]=Z;
+    const f=D/Math.max(R,D-Z);SX[k]=W2+X*f;SY[k]=cy+Y*f;
+  }
+  ctx.clearRect(0,0,W,H);ctx.lineCap='round';
+  if(full){
+    for(let a=0;a<n;a++){
+      ctx.strokeStyle=colorOf(a);ctx.lineWidth=a===n-1?2.6:1.6;ctx.globalAlpha=.9;
+      ctx.beginPath();
+      for(let k=0;k<nv;k++){
+        if((k>>a)&1)continue;const o=k|(1<<a);
+        ctx.moveTo(SX[k],SY[k]);ctx.lineTo(SX[o],SY[o]);
+      }
+      ctx.stroke();
+    }
+  }else{
+    const proj=(X,Y,Z)=>{const f=D/Math.max(R,D-Z);return [W2+X*f,cy+Y*f]};
+    ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.globalAlpha=.2;ctx.beginPath();
+    for(let k=0;k<NS;k++)for(let j=0;j<3;j++){
+      const a=(k*7+j*61+(k>>3))%ne,s=signs[k*MAXA+a];
+      const q=proj(PX[k]-2*s*VX[a],PY[k]-2*s*VY[a],PZ[k]-2*s*VZ[a]);
+      ctx.moveTo(SX[k],SY[k]);ctx.lineTo(q[0],q[1]);
+    }
+    ctx.stroke();
+    if(n<=MAXA){
+      const a=n-1;ctx.strokeStyle=colorOf(a);ctx.lineWidth=1.6;ctx.globalAlpha=.8;ctx.beginPath();
+      for(let k=0;k<NS;k++){
+        const s=signs[k*MAXA+a];
+        const q=proj(PX[k]-2*s*VX[a],PY[k]-2*s*VY[a],PZ[k]-2*s*VZ[a]);
+        ctx.moveTo(SX[k],SY[k]);ctx.lineTo(q[0],q[1]);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=full?1:.8;ctx.fillStyle=ink;
+  const rad=n===0?6:(full?(nv>64?2:2.8):1.6);
+  for(let k=0;k<nv;k++){ctx.beginPath();ctx.arc(SX[k],SY[k],rad,0,6.2832);ctx.fill()}
+  ctx.globalAlpha=1;
+  dn.textContent=(Math.round(d*10)/10).toFixed(1)+'D';
+  const show=Math.round(d);
+  if(show!==lastShow){lastShow=show;st.innerHTML=`uchlar: ${fmt(show,'v')}<br>qirralar: ${fmt(show,'e')}`}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
